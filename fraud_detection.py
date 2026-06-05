@@ -8,6 +8,9 @@ La fonction `load_transactions` vous est FOURNIE (ne la modifiez pas).
 import csv
 
 
+REQUIRED_FIELDS = ("user_id", "amount", "country")
+
+
 def load_transactions(path):
     """Lit un fichier CSV de transactions et renvoie une liste de dicts."""
     transactions = []
@@ -58,13 +61,30 @@ def detect_fraud(transactions):
     for index, transaction in enumerate(transactions or [], start=1):
         tx = transaction if isinstance(transaction, dict) else {}
         transaction_id = tx.get("transaction_id") or f"UNKNOWN-{index}"
+        amount = tx.get("amount")
+        missing_fields = [
+            field for field in REQUIRED_FIELDS if tx.get(field) in (None, "")
+        ]
+
+        if isinstance(amount, (int, float)) and amount <= 0:
+            score = 0.9
+            is_suspicious = True
+            reason = "Montant nul ou negatif"
+        elif missing_fields:
+            score = 0.85
+            is_suspicious = True
+            reason = "Champs obligatoires manquants: " + ", ".join(missing_fields)
+        else:
+            score = 0.0
+            is_suspicious = False
+            reason = "Transaction conforme au profil du client"
 
         results.append(
             {
                 "transaction_id": transaction_id,
-                "fraud_score": 0.0,
-                "is_suspicious": False,
-                "reason": "Transaction conforme au profil du client",
+                "fraud_score": score,
+                "is_suspicious": is_suspicious,
+                "reason": reason,
             }
         )
 
