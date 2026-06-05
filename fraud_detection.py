@@ -98,6 +98,29 @@ def _build_profiles(transactions):
     return profiles
 
 
+def _build_timelines(transactions):
+    timelines = {}
+
+    for index, transaction in enumerate(transactions):
+        if not isinstance(transaction, dict):
+            continue
+
+        user_id = transaction.get("user_id")
+        timestamp = _parse_timestamp(transaction.get("timestamp"))
+        if not user_id or timestamp is None:
+            continue
+
+        timelines.setdefault(user_id, []).append(
+            {
+                "index": index,
+                "timestamp": timestamp,
+                "country": transaction.get("country"),
+            }
+        )
+
+    return timelines
+
+
 def _score_amount_anomaly(amount, profile):
     if not _is_number(amount) or amount <= 0:
         return 0.0, None
@@ -125,6 +148,44 @@ def _score_amount_anomaly(amount, profile):
     return 0.0, None
 
 
+def _score_geography(index, transaction, timelines):
+    user_id = transaction.get("user_id")
+    country = transaction.get("country")
+    timestamp = _parse_timestamp(transaction.get("timestamp"))
+    if not user_id or not country or timestamp is None:
+        return 0.0, None
+
+    for event in timelines.get(user_id, []):
+        if event["index"] == index or not event.get("country"):
+            continue
+        if event["country"] == country:
+            continue
+
+        minutes = abs((timestamp - event["timestamp"]).total_seconds()) / 60
+        if minutes <= 120:
+            return 0.88, "Deux pays differents en trop peu de temps"
+
+    return 0.0, None
+
+
+def _score_frequency(index, transaction, timelines):
+    user_id = transaction.get("user_id")
+    timestamp = _parse_timestamp(transaction.get("timestamp"))
+    if not user_id or timestamp is None:
+        return 0.0, None
+
+    close_events = 0
+    for event in timelines.get(user_id, []):
+        minutes = abs((timestamp - event["timestamp"]).total_seconds()) / 60
+        if minutes <= 10:
+            close_events += 1
+
+    if close_events >= 4:
+        return 0.75, "Frequence de transactions inhabituelle"
+
+    return 0.0, None
+
+
 def detect_fraud(transactions):
     """Analyse une liste de transactions et renvoie un verdict pour chacune.
 
@@ -134,13 +195,17 @@ def detect_fraud(transactions):
     results = []
     transactions = transactions or []
     profiles = _build_profiles(transactions)
+    timelines = _build_timelines(transactions)
 
     for index, transaction in enumerate(transactions, start=1):
         tx = transaction if isinstance(transaction, dict) else {}
+        tx_index = index - 1
         transaction_id = tx.get("transaction_id") or f"UNKNOWN-{index}"
         amount = tx.get("amount")
         profile = profiles.get((tx.get("user_id"), tx.get("currency")), {})
         amount_score, amount_reason = _score_amount_anomaly(amount, profile)
+        geography_score, geography_reason = _score_geography(tx_index, tx, timelines)
+        frequency_score, frequency_reason = _score_frequency(tx_index, tx, timelines)
         missing_fields = [
             field for field in REQUIRED_FIELDS if tx.get(field) in (None, "")
         ]
@@ -153,14 +218,18 @@ def detect_fraud(transactions):
             score = 0.85
             is_suspicious = True
             reason = "Champs obligatoires manquants: " + ", ".join(missing_fields)
-        elif amount_reason:
-            score = amount_score
-            is_suspicious = True
-            reason = amount_reason
         else:
-            score = 0.0
-            is_suspicious = False
-            reason = "Transaction conforme au profil du client"
+            signals = [
+                (amount_score, amount_reason),
+                (geography_score, geography_reason),
+                (frequency_score, frequency_reason),
+            ]
+            score, reason = max(signals, key=lambda signal: signal[0])
+            is_suspicious = True
+            if not reason:
+                score = 0.0
+                is_suspicious = False
+                reason = "Transaction conforme au profil du client"
 
         results.append(
             {
