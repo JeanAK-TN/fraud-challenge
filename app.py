@@ -19,6 +19,29 @@ from fraud_detection import detect_fraud, load_transactions
 SAMPLE_CSV = Path(__file__).parent / "data" / "sample_transactions.csv"
 
 
+def _transactions_key(transactions: list[dict]) -> tuple:
+    key = []
+    for transaction in transactions:
+        if not isinstance(transaction, dict):
+            key.append(("invalid",))
+            continue
+
+        key.append(
+            (
+                transaction.get("transaction_id"),
+                transaction.get("timestamp"),
+                transaction.get("user_id"),
+                transaction.get("amount"),
+                transaction.get("currency"),
+                transaction.get("merchant"),
+                transaction.get("country"),
+                transaction.get("card_present"),
+            )
+        )
+
+    return tuple(key)
+
+
 def render_interface(transactions: list[dict], results: list[dict]) -> None:
     tx_df = pd.DataFrame(transactions)
     result_df = pd.DataFrame(results)
@@ -147,8 +170,11 @@ def main() -> None:
 
     if not transactions:
         st.info("Chargez des transactions (barre latérale) puis lancez l'analyse.")
+        st.session_state.pop("analysis_key", None)
+        st.session_state.pop("analysis_results", None)
         return
 
+    current_key = _transactions_key(transactions)
     if st.button("Analyser", type="primary"):
         try:
             results = detect_fraud(transactions)
@@ -159,7 +185,16 @@ def main() -> None:
             st.error(f"Erreur : {exc}")
             return
 
-        render_interface(transactions, results)
+        st.session_state["analysis_key"] = current_key
+        st.session_state["analysis_results"] = results
+
+    saved_key = st.session_state.get("analysis_key")
+    saved_results = st.session_state.get("analysis_results")
+
+    if saved_key == current_key and saved_results is not None:
+        render_interface(transactions, saved_results)
+    else:
+        st.info("Cliquez sur Analyser pour afficher les résultats.")
 
 
 if __name__ == "__main__":
