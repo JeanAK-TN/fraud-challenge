@@ -6,6 +6,8 @@ La fonction `load_transactions` vous est FOURNIE (ne la modifiez pas).
 """
 
 import csv
+from datetime import datetime, timezone
+from statistics import median
 
 
 REQUIRED_FIELDS = ("user_id", "amount", "country")
@@ -50,6 +52,52 @@ def _clean_row(row):
     }
 
 
+def _is_number(value):
+    return isinstance(value, (int, float)) and not isinstance(value, bool)
+
+
+def _parse_timestamp(value):
+    if not isinstance(value, str) or not value.strip():
+        return None
+
+    text = value.strip()
+    if text.endswith("Z"):
+        text = text[:-1] + "+00:00"
+
+    try:
+        parsed = datetime.fromisoformat(text)
+    except ValueError:
+        return None
+
+    if parsed.tzinfo is not None:
+        return parsed.astimezone(timezone.utc).replace(tzinfo=None)
+
+    return parsed
+
+
+def _build_profiles(transactions):
+    profiles = {}
+
+    for transaction in transactions:
+        if not isinstance(transaction, dict):
+            continue
+
+        user_id = transaction.get("user_id")
+        amount = transaction.get("amount")
+        if not user_id or not _is_number(amount) or amount <= 0:
+            continue
+
+        key = (user_id, transaction.get("currency"))
+        profile = profiles.setdefault(key, {"amounts": [], "countries": set()})
+        profile["amounts"].append(amount)
+
+        country = transaction.get("country")
+        if country:
+            profile["countries"].add(country)
+
+    return profiles
+
+
 def detect_fraud(transactions):
     """Analyse une liste de transactions et renvoie un verdict pour chacune.
 
@@ -57,11 +105,14 @@ def detect_fraud(transactions):
     is_suspicious (bool), reason (str) — un résultat par transaction, même ordre.
     """
     results = []
+    transactions = transactions or []
+    profiles = _build_profiles(transactions)
 
-    for index, transaction in enumerate(transactions or [], start=1):
+    for index, transaction in enumerate(transactions, start=1):
         tx = transaction if isinstance(transaction, dict) else {}
         transaction_id = tx.get("transaction_id") or f"UNKNOWN-{index}"
         amount = tx.get("amount")
+        profile = profiles.get((tx.get("user_id"), tx.get("currency")), {})
         missing_fields = [
             field for field in REQUIRED_FIELDS if tx.get(field) in (None, "")
         ]
