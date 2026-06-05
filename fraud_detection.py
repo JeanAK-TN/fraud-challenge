@@ -56,6 +56,31 @@ def _is_number(value):
     return isinstance(value, (int, float)) and not isinstance(value, bool)
 
 
+def _normalize_code(value):
+    if not isinstance(value, str):
+        return value
+
+    value = value.strip()
+    return value.upper() if value else None
+
+
+def _profile_key(transaction):
+    return transaction.get("user_id"), _normalize_code(transaction.get("currency"))
+
+
+def _missing_required_fields(transaction):
+    missing = []
+
+    for field in REQUIRED_FIELDS:
+        value = transaction.get(field)
+        if value in (None, ""):
+            missing.append(field)
+        elif field == "amount" and not _is_number(value):
+            missing.append(field)
+
+    return missing
+
+
 def _parse_timestamp(value):
     if not isinstance(value, str) or not value.strip():
         return None
@@ -87,11 +112,11 @@ def _build_profiles(transactions):
         if not user_id or not _is_number(amount) or amount <= 0:
             continue
 
-        key = (user_id, transaction.get("currency"))
+        key = _profile_key(transaction)
         profile = profiles.setdefault(key, {"amounts": [], "countries": set()})
         profile["amounts"].append(amount)
 
-        country = transaction.get("country")
+        country = _normalize_code(transaction.get("country"))
         if country:
             profile["countries"].add(country)
 
@@ -114,11 +139,25 @@ def _build_timelines(transactions):
             {
                 "index": index,
                 "timestamp": timestamp,
-                "country": transaction.get("country"),
+                "country": _normalize_code(transaction.get("country")),
             }
         )
 
     return timelines
+
+
+def _build_transaction_id_counts(transactions):
+    counts = {}
+
+    for transaction in transactions:
+        if not isinstance(transaction, dict):
+            continue
+
+        transaction_id = transaction.get("transaction_id")
+        if transaction_id:
+            counts[transaction_id] = counts.get(transaction_id, 0) + 1
+
+    return counts
 
 
 def _score_amount_anomaly(amount, profile):
@@ -150,7 +189,7 @@ def _score_amount_anomaly(amount, profile):
 
 def _score_geography(index, transaction, timelines):
     user_id = transaction.get("user_id")
-    country = transaction.get("country")
+    country = _normalize_code(transaction.get("country"))
     timestamp = _parse_timestamp(transaction.get("timestamp"))
     if not user_id or not country or timestamp is None:
         return 0.0, None
@@ -186,6 +225,14 @@ def _score_frequency(index, transaction, timelines):
     return 0.0, None
 
 
+def _score_duplicate(transaction, id_counts):
+    transaction_id = transaction.get("transaction_id")
+    if transaction_id and id_counts.get(transaction_id, 0) > 1:
+        return 0.7, "Identifiant de transaction en double"
+
+    return 0.0, None
+
+
 def detect_fraud(transactions):
     """Analyse une liste de transactions et renvoie un verdict pour chacune.
 
@@ -196,21 +243,21 @@ def detect_fraud(transactions):
     transactions = transactions or []
     profiles = _build_profiles(transactions)
     timelines = _build_timelines(transactions)
+    id_counts = _build_transaction_id_counts(transactions)
 
     for index, transaction in enumerate(transactions, start=1):
         tx = transaction if isinstance(transaction, dict) else {}
         tx_index = index - 1
         transaction_id = tx.get("transaction_id") or f"UNKNOWN-{index}"
         amount = tx.get("amount")
-        profile = profiles.get((tx.get("user_id"), tx.get("currency")), {})
+        profile = profiles.get(_profile_key(tx), {})
         amount_score, amount_reason = _score_amount_anomaly(amount, profile)
         geography_score, geography_reason = _score_geography(tx_index, tx, timelines)
         frequency_score, frequency_reason = _score_frequency(tx_index, tx, timelines)
-        missing_fields = [
-            field for field in REQUIRED_FIELDS if tx.get(field) in (None, "")
-        ]
+        duplicate_score, duplicate_reason = _score_duplicate(tx, id_counts)
+        missing_fields = _missing_required_fields(tx)
 
-        if isinstance(amount, (int, float)) and amount <= 0:
+        if _is_number(amount) and amount <= 0:
             score = 0.9
             is_suspicious = True
             reason = "Montant nul ou negatif"
@@ -223,6 +270,7 @@ def detect_fraud(transactions):
                 (amount_score, amount_reason),
                 (geography_score, geography_reason),
                 (frequency_score, frequency_reason),
+                (duplicate_score, duplicate_reason),
             ]
             score, reason = max(signals, key=lambda signal: signal[0])
             is_suspicious = True
