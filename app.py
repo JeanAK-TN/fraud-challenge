@@ -20,11 +20,35 @@ SAMPLE_CSV = Path(__file__).parent / "data" / "sample_transactions.csv"
 
 # Palette par niveau de risque : vert (sûr) -> ambre (à surveiller) -> rouge (alerte).
 LEVEL_COLORS = {
-    "Faible": "#16a34a",
+    "Faible": "#22c55e",
     "Moyen": "#f59e0b",
     "Élevé": "#ef4444",
 }
 LEVEL_EMOJI = {"Faible": "🟢", "Moyen": "🟠", "Élevé": "🔴"}
+
+# Variables CSS adaptées au thème actif. Les couleurs de marque et de risque
+# restent identiques (elles tiennent sur fond clair comme sombre) ; seules les
+# surfaces, lignes et couleurs de texte changent.
+_THEME_VARS = {
+    "light": {
+        "elev": "#ffffff",
+        "soft": "#f1f5f9",
+        "ink": "#0f172a",
+        "ink-soft": "#64748b",
+        "line": "#e2e8f0",
+        "track": "#e9eef5",
+        "shadow": "0 12px 28px -22px rgba(15, 23, 42, 0.55)",
+    },
+    "dark": {
+        "elev": "#161b27",
+        "soft": "#0f1420",
+        "ink": "#f1f5f9",
+        "ink-soft": "#94a3b8",
+        "line": "#283142",
+        "track": "#1f2738",
+        "shadow": "0 12px 28px -18px rgba(0, 0, 0, 0.7)",
+    },
+}
 
 
 def _transactions_key(transactions: list[dict]) -> tuple:
@@ -50,81 +74,122 @@ def _transactions_key(transactions: list[dict]) -> tuple:
     return tuple(key)
 
 
+def _theme_type() -> str:
+    """Renvoie 'light' ou 'dark' selon le thème Streamlit actif (toggle in-app)."""
+    try:
+        detected = st.context.theme.get("type")
+    except Exception:
+        detected = None
+    return detected if detected in ("light", "dark") else "light"
+
+
+def _vars_block(theme: str) -> str:
+    return "".join(f"--{name}:{value};" for name, value in _THEME_VARS[theme].items())
+
+
 def _inject_styles() -> None:
-    """Thème visuel global : typographie, cartes, dégradés, badges."""
+    """Identité visuelle : surfaces theme-aware, cartes, dégradés, badges."""
+    detected = _theme_type()
     st.markdown(
-        """
+        f"""
         <style>
-        :root {
-            --bg-card: #ffffff;
-            --ink: #0f172a;
-            --ink-soft: #64748b;
-            --line: #e2e8f0;
-        }
-        /* Fond général légèrement teinté pour faire ressortir les cartes blanches. */
-        .stApp { background: linear-gradient(180deg, #f8fafc 0%, #eef2f7 100%); }
-        .block-container { padding-top: 1.6rem; max-width: 1180px; }
+        @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&display=swap');
+
+        /* Base claire, puis surcharge sombre selon l'OS, puis valeur autoritaire
+           detectee cote Python (suit le toggle clair/sombre de Streamlit). */
+        :root {{ {_vars_block("light")} }}
+        @media (prefers-color-scheme: dark) {{ :root {{ {_vars_block("dark")} }} }}
+        :root {{ {_vars_block(detected)} }}
+
+        :root {{
+            --brand: #7c3aed;
+            --brand-2: #4f46e5;
+            --radius: 16px;
+        }}
+
+        .block-container {{ padding-top: 1.4rem; max-width: 1160px; }}
+
+        /* Eyebrow + titres : police geometrique pour l'identite. */
+        .eyebrow {{
+            font-family: 'Space Grotesk', system-ui, sans-serif;
+            text-transform: uppercase; letter-spacing: 2px;
+            font-size: 0.72rem; font-weight: 600; color: var(--brand);
+            display: flex; align-items: center; gap: 8px; margin: 4px 0 10px;
+        }}
+        .eyebrow::before {{ content: ""; width: 22px; height: 3px; border-radius: 3px;
+            background: linear-gradient(90deg, var(--brand), var(--brand-2)); }}
 
         /* En-tête héro. */
-        .hero {
-            background: linear-gradient(120deg, #4f46e5 0%, #7c3aed 55%, #2563eb 100%);
-            border-radius: 20px;
-            padding: 26px 30px;
-            color: #fff;
-            box-shadow: 0 18px 40px -18px rgba(79, 70, 229, 0.65);
-        }
-        .hero h1 { margin: 0; font-size: 1.9rem; font-weight: 800; letter-spacing: -0.5px; }
-        .hero p { margin: 6px 0 0; opacity: 0.92; font-size: 0.98rem; }
-        .hero .pill {
-            display: inline-block; margin-top: 14px; padding: 5px 14px;
-            background: rgba(255, 255, 255, 0.18); border: 1px solid rgba(255,255,255,0.25);
-            border-radius: 999px; font-size: 0.8rem; font-weight: 600; letter-spacing: 0.3px;
-        }
+        .hero {{
+            position: relative; overflow: hidden;
+            background: linear-gradient(120deg, #4f46e5 0%, #7c3aed 52%, #6366f1 100%);
+            border-radius: 22px; padding: 28px 32px; color: #fff;
+            box-shadow: 0 22px 50px -24px rgba(79, 70, 229, 0.75);
+        }}
+        .hero::after {{
+            content: ""; position: absolute; top: -60%; right: -10%;
+            width: 320px; height: 320px; border-radius: 50%;
+            background: radial-gradient(circle, rgba(255,255,255,0.22), transparent 65%);
+        }}
+        .hero h1 {{ font-family: 'Space Grotesk', system-ui, sans-serif;
+            margin: 0; font-size: 2rem; font-weight: 700; letter-spacing: -0.5px; }}
+        .hero p {{ margin: 8px 0 0; opacity: 0.94; font-size: 1rem; max-width: 640px; }}
+        .hero .pill {{
+            display: inline-block; margin-top: 16px; padding: 6px 15px;
+            background: rgba(255, 255, 255, 0.16); border: 1px solid rgba(255,255,255,0.28);
+            border-radius: 999px; font-size: 0.78rem; font-weight: 600; letter-spacing: 0.3px;
+        }}
 
         /* Cartes d'indicateurs (KPI). */
-        .kpi {
-            background: var(--bg-card); border: 1px solid var(--line);
-            border-radius: 16px; padding: 18px 20px; height: 100%;
-            box-shadow: 0 10px 24px -20px rgba(15, 23, 42, 0.55);
+        .kpi {{
+            background: var(--elev); border: 1px solid var(--line);
+            border-left: 4px solid var(--accent, var(--brand));
+            border-radius: var(--radius); padding: 18px 20px; height: 100%;
+            box-shadow: var(--shadow);
             transition: transform 0.15s ease, box-shadow 0.15s ease;
-        }
-        .kpi:hover { transform: translateY(-3px); box-shadow: 0 18px 30px -22px rgba(15,23,42,0.6); }
-        .kpi .label { color: var(--ink-soft); font-size: 0.82rem; font-weight: 600;
-            text-transform: uppercase; letter-spacing: 0.5px; display: flex; gap: 7px; align-items: center; }
-        .kpi .value { color: var(--ink); font-size: 2.1rem; font-weight: 800; line-height: 1.1; margin-top: 8px; }
-        .kpi .sub { color: var(--ink-soft); font-size: 0.8rem; margin-top: 4px; }
-        .kpi.accent-left { border-left: 5px solid var(--accent, #4f46e5); }
+        }}
+        .kpi:hover {{ transform: translateY(-3px); box-shadow: 0 20px 34px -22px rgba(79,70,229,0.45); }}
+        .kpi .label {{ color: var(--ink-soft); font-size: 0.78rem; font-weight: 600;
+            text-transform: uppercase; letter-spacing: 0.6px; display: flex; gap: 7px; align-items: center; }}
+        .kpi .value {{ font-family: 'Space Grotesk', system-ui, sans-serif;
+            color: var(--ink); font-size: 2.05rem; font-weight: 700; line-height: 1.1; margin-top: 8px; }}
+        .kpi .sub {{ color: var(--ink-soft); font-size: 0.78rem; margin-top: 4px; }}
 
         /* Barres de répartition du risque. */
-        .dist-row { display: flex; align-items: center; gap: 12px; margin: 9px 0; }
-        .dist-name { width: 78px; font-weight: 600; font-size: 0.9rem; color: var(--ink); }
-        .dist-track { flex: 1; background: #eef2f7; border-radius: 999px; height: 14px; overflow: hidden; }
-        .dist-fill { height: 100%; border-radius: 999px; transition: width 0.4s ease; }
-        .dist-count { width: 42px; text-align: right; font-weight: 700; color: var(--ink); font-variant-numeric: tabular-nums; }
+        .dist-row {{ display: flex; align-items: center; gap: 12px; margin: 9px 0; }}
+        .dist-name {{ width: 92px; font-weight: 600; font-size: 0.9rem; color: var(--ink); }}
+        .dist-track {{ flex: 1; background: var(--track); border-radius: 999px; height: 13px; overflow: hidden; }}
+        .dist-fill {{ height: 100%; border-radius: 999px; transition: width 0.45s ease; }}
+        .dist-count {{ width: 40px; text-align: right; font-weight: 700; color: var(--ink);
+            font-variant-numeric: tabular-nums; }}
 
         /* Cartes d'alerte. */
-        .alert-card {
-            background: var(--bg-card); border: 1px solid var(--line);
-            border-left: 6px solid var(--accent, #ef4444);
+        .alert-card {{
+            background: var(--elev); border: 1px solid var(--line);
+            border-left: 5px solid var(--accent, #ef4444);
             border-radius: 14px; padding: 16px 18px; margin-bottom: 12px;
-            box-shadow: 0 10px 22px -20px rgba(15, 23, 42, 0.5);
-        }
-        .alert-head { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; }
-        .alert-id { font-weight: 800; color: var(--ink); font-size: 1.02rem; }
-        .alert-meta { color: var(--ink-soft); font-size: 0.85rem; }
-        .alert-reason { margin-top: 8px; color: #334155; font-size: 0.92rem; }
-        .score-badge {
-            color: #fff; font-weight: 800; padding: 4px 12px; border-radius: 999px;
+            box-shadow: var(--shadow);
+        }}
+        .alert-head {{ display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; }}
+        .alert-id {{ font-family: 'Space Grotesk', system-ui, sans-serif;
+            font-weight: 700; color: var(--ink); font-size: 1.05rem; }}
+        .alert-meta {{ color: var(--ink-soft); font-size: 0.85rem; margin-top: 2px; }}
+        .alert-reason {{ margin-top: 9px; color: var(--ink); font-size: 0.92rem; }}
+        .score-badge {{
+            color: #fff; font-weight: 700; padding: 4px 13px; border-radius: 999px;
             font-size: 0.85rem; white-space: nowrap;
-        }
-        .gauge-track { background: #eef2f7; border-radius: 999px; height: 8px; margin-top: 10px; overflow: hidden; }
-        .gauge-fill { height: 100%; border-radius: 999px; }
-
-        section[data-testid="stSidebar"] { background: #ffffff; border-right: 1px solid var(--line); }
+            font-family: 'Space Grotesk', system-ui, sans-serif;
+        }}
+        .gauge-track {{ background: var(--track); border-radius: 999px; height: 7px; margin-top: 11px; overflow: hidden; }}
+        .gauge-fill {{ height: 100%; border-radius: 999px; }}
         </style>
         """,
         unsafe_allow_html=True,
     )
+
+
+def _eyebrow(text: str) -> None:
+    st.markdown(f'<div class="eyebrow">{text}</div>', unsafe_allow_html=True)
 
 
 def _risk_accent(score: float) -> str:
@@ -137,7 +202,7 @@ def _risk_accent(score: float) -> str:
 
 def _kpi_card(label: str, value: str, icon: str, sub: str, accent: str) -> str:
     return (
-        f'<div class="kpi accent-left" style="--accent:{accent}">'
+        f'<div class="kpi" style="--accent:{accent}">'
         f'<div class="label">{icon} {label}</div>'
         f'<div class="value">{value}</div>'
         f'<div class="sub">{sub}</div>'
@@ -146,7 +211,7 @@ def _kpi_card(label: str, value: str, icon: str, sub: str, accent: str) -> str:
 
 
 def _risk_distribution(df: pd.DataFrame) -> None:
-    st.markdown("##### Répartition du risque")
+    _eyebrow("Répartition du risque")
     total = max(len(df), 1)
     counts = df["niveau"].value_counts()
     for level in ("Élevé", "Moyen", "Faible"):
@@ -186,7 +251,7 @@ def render_interface(transactions: list[dict], results: list[dict]) -> None:
     alert_rate = suspicious / total * 100 if total else 0.0
 
     # --- Indicateurs clés -------------------------------------------------
-    st.markdown("#### Vue d'ensemble")
+    _eyebrow("Vue d'ensemble")
     k1, k2, k3, k4 = st.columns(4)
     k1.markdown(
         _kpi_card("Transactions", f"{total}", "🧾", "analysées dans ce lot", "#4f46e5"),
@@ -210,7 +275,7 @@ def render_interface(transactions: list[dict], results: list[dict]) -> None:
     st.divider()
 
     # --- Filtres ----------------------------------------------------------
-    st.markdown("#### Explorer les transactions")
+    _eyebrow("Explorer les transactions")
     filter_col, user_col, level_col = st.columns([1, 1, 1])
     with filter_col:
         only_alerts = st.toggle("Afficher seulement les alertes", value=False)
@@ -236,13 +301,13 @@ def render_interface(transactions: list[dict], results: list[dict]) -> None:
     with chart_col:
         st.markdown("##### Risque par transaction")
         chart_df = filtered[["transaction_id", "fraud_score"]].set_index("transaction_id")
-        st.bar_chart(chart_df, use_container_width=True, color="#7c3aed")
+        st.bar_chart(chart_df, width="stretch", color="#7c3aed")
     with reason_col:
         st.markdown("##### Principales raisons")
         reason_counts = filtered["reason"].value_counts().rename_axis("raison").reset_index(name="nombre")
         st.dataframe(
             reason_counts,
-            use_container_width=True,
+            width="stretch",
             hide_index=True,
             column_config={
                 "raison": st.column_config.TextColumn("Raison détectée"),
@@ -253,13 +318,17 @@ def render_interface(transactions: list[dict], results: list[dict]) -> None:
     # --- Détail des alertes en cartes lisibles ----------------------------
     alerts = filtered[filtered["is_suspicious"]].sort_values("fraud_score", ascending=False)
     if not alerts.empty:
-        st.markdown("#### 🚨 Alertes prioritaires")
+        _eyebrow("Alertes prioritaires")
         st.caption("Les transactions les plus risquées, expliquées en clair.")
         for alert in alerts.head(6).to_dict("records"):
             score = float(alert.get("fraud_score", 0.0))
             color = _risk_accent(score)
             amount = alert.get("amount")
-            amount_txt = f"{amount:,.2f} {alert.get('currency') or ''}".strip() if isinstance(amount, (int, float)) else "—"
+            amount_txt = (
+                f"{amount:,.2f} {alert.get('currency') or ''}".strip()
+                if isinstance(amount, (int, float))
+                else "—"
+            )
             merchant = alert.get("merchant") or "Marchand inconnu"
             country = alert.get("country") or "??"
             st.markdown(
@@ -278,7 +347,7 @@ def render_interface(transactions: list[dict], results: list[dict]) -> None:
             )
 
     # --- Tableau détaillé -------------------------------------------------
-    st.markdown("#### Toutes les transactions analysées")
+    _eyebrow("Toutes les transactions analysées")
     display_columns = [
         "transaction_id",
         "user_id",
@@ -297,7 +366,7 @@ def render_interface(transactions: list[dict], results: list[dict]) -> None:
     table = filtered[existing_columns].sort_values("fraud_score", ascending=False)
     st.dataframe(
         table,
-        use_container_width=True,
+        width="stretch",
         hide_index=True,
         column_config={
             "transaction_id": st.column_config.TextColumn("ID"),
@@ -385,7 +454,7 @@ def main() -> None:
     current_key = _transactions_key(transactions)
     cta_col, _ = st.columns([1, 3])
     with cta_col:
-        run = st.button("🔍 Analyser les transactions", type="primary", use_container_width=True)
+        run = st.button("🔍 Analyser les transactions", type="primary", width="stretch")
 
     if run:
         try:

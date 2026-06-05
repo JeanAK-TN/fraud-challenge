@@ -1,0 +1,4 @@
+# Couleur de marque "Sentinelle" appliquee aux boutons et widgets.
+# On ne fixe ni base ni couleur de fond : le toggle clair/sombre reste libre.
+[theme]
+primaryColor = "#7c3aed"
