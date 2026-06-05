@@ -1,0 +1,62 @@
+[
+  {
+    "transaction_id": "T-001",
+    "fraud_score": 0.0,
+    "is_suspicious": false,
+    "reason": "Transaction conforme au profil du client"
+  },
+  {
+    "transaction_id": "T-002",
+    "fraud_score": 0.0,
+    "is_suspicious": false,
+    "reason": "Transaction conforme au profil du client"
+  },
+  {
+    "transaction_id": "T-003",
+    "fraud_score": 0.0,
+    "is_suspicious": false,
+    "reason": "Transaction conforme au profil du client"
+  },
+  {
+    "transaction_id": "T-004",
+    "fraud_score": 0.9,
+    "is_suspicious": true,
+    "reason": "Montant très supérieur à l'habitude du client"
+  },
+  {
+    "transaction_id": "T-010",
+    "fraud_score": 0.88,
+    "is_suspicious": true,
+    "reason": "Deux pays différents en trop peu de temps"
+  },
+  {
+    "transaction_id": "T-011",
+    "fraud_score": 0.88,
+    "is_suspicious": true,
+    "reason": "Deux pays différents en trop peu de temps"
+  },
+  {
+    "transaction_id": "T-020",
+    "fraud_score": 0.9,
+    "is_suspicious": true,
+    "reason": "Montant nul ou négatif"
+  },
+  {
+    "transaction_id": "T-021",
+    "fraud_score": 0.85,
+    "is_suspicious": true,
+    "reason": "Champs obligatoires manquants: country"
+  },
+  {
+    "transaction_id": "T-030",
+    "fraud_score": 0.0,
+    "is_suspicious": false,
+    "reason": "Transaction conforme au profil du client"
+  },
+  {
+    "transaction_id": "T-031",
+    "fraud_score": 0.0,
+    "is_suspicious": false,
+    "reason": "Transaction conforme au profil du client"
+  }
+]

@@ -1,0 +1,37 @@
+name: Hackathon — Score tests publics
+
+on:
+  pull_request:
+    branches: [main, master]
+  push:
+    branches: [main, master]
+
+permissions:
+  contents: read
+
+jobs:
+  tests:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: Dépendances
+        run: pip install -r requirements.txt
+
+      - name: Tests publics + score X/Y
+        run: python scripts/ci_score.py tests
+
+      - name: Résumé PR (score)
+        if: always() && github.event_name == 'pull_request'
+        run: |
+          echo "### Résultat des tests publics" >> "$GITHUB_STEP_SUMMARY"
+          echo "Consultez les logs ci-dessus pour le score **X/Y**." >> "$GITHUB_STEP_SUMMARY"
+          echo "Les tests cachés (classement final) ne sont pas exécutés ici." >> "$GITHUB_STEP_SUMMARY"

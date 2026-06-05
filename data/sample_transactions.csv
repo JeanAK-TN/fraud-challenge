@@ -1,0 +1,11 @@
+transaction_id,timestamp,user_id,amount,currency,merchant,country,card_present
+T-001,2025-05-02T09:15:00Z,U1,48.00,EUR,Boulangerie,FR,true
+T-002,2025-05-09T12:40:00Z,U1,52.50,EUR,Supermarche,FR,true
+T-003,2025-05-15T19:05:00Z,U1,47.20,EUR,Restaurant,FR,true
+T-004,2025-06-01T03:22:00Z,U1,4800.00,EUR,Bijouterie,FR,false
+T-010,2025-06-01T10:00:00Z,U2,60.00,EUR,Cafe,FR,true
+T-011,2025-06-01T10:40:00Z,U2,75.00,JPY,Konbini,JP,false
+T-020,2025-06-02T14:00:00Z,U3,-30.00,EUR,Remboursement?,FR,true
+T-021,2025-06-02T15:00:00Z,U3,40.00,EUR,Kiosque,,true
+T-030,2025-06-03T08:00:00Z,U4,90.00,EUR,Hotel,FR,true
+T-031,2025-06-06T08:00:00Z,U4,120.00,USD,Hotel,US,false
