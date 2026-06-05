@@ -25,6 +25,9 @@ pip install -r requirements.txt
 pytest tests/ -v
 
 # 4. Implémentez detect_fraud dans fraud_detection.py
+
+# 5. Montrez vos résultats au jury / au public (interface fournie)
+streamlit run app.py
 ```
 
 À chaque **push** sur votre fork et à chaque **pull request** vers le dépôt officiel, la CI relance les tests et affiche votre score **X/Y tests publics réussis**.
@@ -43,11 +46,25 @@ pytest tests/ -v
 
 ---
 
-## Interface à implémenter (pas de site web obligatoire)
+## Interface pour le jury et le public
 
-Vous ne construisez **pas** une application web pour ce défi. Vous complétez l’**interface Python** imposée : la fonction `detect_fraud` (contrat fixe, testée par pytest). Vous pouvez utiliser des règles, des scores, ou de l’IA/ML **dans cette fonction** — tant que les tests passent.
+Une **interface web de démo** est fournie (`app.py`). Elle appelle **votre** `detect_fraud` et affiche :
 
-## Ce que vous devez implémenter
+- le nombre d’alertes fraude ;
+- un tableau lisible (montant, pays, score, explication) ;
+- les transactions suspectes mises en évidence.
+
+```bash
+streamlit run app.py
+```
+
+Vous n’avez **pas** à recréer l’interface from scratch : codez la logique dans `fraud_detection.py`, l’écran se met à jour tout seul.  
+**Bonus (non noté en CI)** : améliorez `app.py` (graphiques, textes, filtres…) pour une démo plus parlante devant un public non technique.
+
+> **Ce qui est noté** : les tests `pytest` (CI + classement final).  
+> **Ce qui est montré** : `streamlit run app.py` pour que les profanes comprennent votre solution.
+
+## Ce que vous devez implémenter (cœur du défi)
 
 Dans `fraud_detection.py`, complétez :
 

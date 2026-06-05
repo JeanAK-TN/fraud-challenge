@@ -53,20 +53,32 @@ Dépôt officiel : https://github.com/INTELO2026/fraud-challenge
 2. Clonez VOTRE fork : git clone https://github.com/VOTRE-PSEUDO/fraud-challenge.git
 3. pip install -r requirements.txt
 4. pytest tests/ -v
-5. Implémentez detect_fraud dans fraud_detection.py (pas de site web obligatoire)
-6. git push puis ouvrez une Pull Request vers INTELO2026/fraud-challenge
-7. La CI affiche X/11 tests publics passés
+5. Implémentez detect_fraud dans fraud_detection.py
+6. Démo pour le jury / le public : streamlit run app.py
+7. git push puis ouvrez une Pull Request vers INTELO2026/fraud-challenge
+8. La CI affiche X/11 tests publics passés
+
+Note : l'interface Streamlit est fournie — vous codez la détection, l'écran s'affiche tout seul.
+La note officielle = tests automatiques. L'interface sert à présenter devant un public non technique.
 ```
 
 ---
 
 ## Classement final (organisateurs)
 
-La CI publique ne lance que les **11 tests visibles**. Pour le podium (21 tests) :
+À la **deadline**, une seule commande pour toutes les PR :
+
+```powershell
+cd "d:\Projet\Hackathin IT"
+.\organisateur\scripts\score_all_prs.ps1
+```
+
+→ classement **X/21** (public + tests cachés) + CSV dans `organisateur/resultats/`.
+
+Avant le hackathon (vérif épreuve) :
 
 ```powershell
 python organisateur/scripts/validate_epreuve.py
-python organisateur/scripts/score_submission.py C:\chemin\vers\fork-du-participant
 ```
 
 Gardez le dossier `organisateur/` en local ou dans un repo **privé** séparé.
