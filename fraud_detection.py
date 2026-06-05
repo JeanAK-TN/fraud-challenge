@@ -98,6 +98,33 @@ def _build_profiles(transactions):
     return profiles
 
 
+def _score_amount_anomaly(amount, profile):
+    if not _is_number(amount) or amount <= 0:
+        return 0.0, None
+
+    amounts = [
+        value
+        for value in profile.get("amounts", [])
+        if _is_number(value) and value > 0
+    ]
+    if len(amounts) < 4:
+        return 0.0, None
+
+    usual_amount = median(amounts)
+    if usual_amount <= 0:
+        return 0.0, None
+
+    ratio = amount / usual_amount
+    gap = amount - usual_amount
+
+    if ratio >= 8 and gap >= 100:
+        return 0.95, "Montant tres superieur a l'habitude du client"
+    if ratio >= 4 and gap >= 500:
+        return 0.8, "Montant inhabituel pour ce client"
+
+    return 0.0, None
+
+
 def detect_fraud(transactions):
     """Analyse une liste de transactions et renvoie un verdict pour chacune.
 
@@ -113,6 +140,7 @@ def detect_fraud(transactions):
         transaction_id = tx.get("transaction_id") or f"UNKNOWN-{index}"
         amount = tx.get("amount")
         profile = profiles.get((tx.get("user_id"), tx.get("currency")), {})
+        amount_score, amount_reason = _score_amount_anomaly(amount, profile)
         missing_fields = [
             field for field in REQUIRED_FIELDS if tx.get(field) in (None, "")
         ]
@@ -125,6 +153,10 @@ def detect_fraud(transactions):
             score = 0.85
             is_suspicious = True
             reason = "Champs obligatoires manquants: " + ", ".join(missing_fields)
+        elif amount_reason:
+            score = amount_score
+            is_suspicious = True
+            reason = amount_reason
         else:
             score = 0.0
             is_suspicious = False
