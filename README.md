@@ -131,4 +131,24 @@ from fraud_detection import load_transactions, detect_fraud
 resultats = detect_fraud(load_transactions("data/sample_transactions.csv"))
 ```
 
+## Approche implémentée
+
+La fonction `detect_fraud` combine plusieurs signaux simples et explicables :
+
+- validation du format de sortie pour chaque transaction, même si les données sont incomplètes ;
+- signalement des montants nuls, négatifs, absents ou non numériques ;
+- comparaison du montant avec l'historique du client dans la même devise ;
+- détection de transactions trop rapprochées pour un même client ;
+- détection de deux pays différents dans un délai très court ;
+- signalement des identifiants de transaction dupliqués ;
+- normalisation des codes pays et devises pour éviter les faux positifs liés à la casse.
+
+Le score reste compris entre `0.0` et `1.0`. Quand plusieurs signaux sont présents, la raison affichée correspond au signal le plus fort.
+
+L'interface Streamlit présente les résultats avec des indicateurs, des filtres, un graphique de risque et le détail des principales alertes :
+
+```bash
+streamlit run app.py
+```
+
 Bon courage !
